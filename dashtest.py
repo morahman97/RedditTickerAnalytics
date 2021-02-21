@@ -10,14 +10,12 @@ from requests import get
 print(dcc.__version__) # 0.6.0 or above is required
 
 #external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+X = []
+time = 0
+Y = []
+database = defaultdict(list)
 
 app = dash.Dash(__name__)
-
-#data = {'GME': 3}
-X = []
-X.append(1)
-Y = []
-Y.append(1)
 
 app.layout = html.Div(
     [
@@ -39,17 +37,18 @@ app.layout = html.Div(
     ]
 )
 
-database = defaultdict(int)
 
 @app.callback(Output('live-graph', 'figure'),
               [dash.dependencies.Input('url', 'pathname'),
                Input('graph-update', 'n_intervals')])
 def update_graph_scatter(pathname, input_data):
+    global time
     update_data()
-    X.append(X[-1]+1)
+    X.append(time)
+    time += 1
     pathname = pathname[1:]
-    print("MOMENT OF TRUTH: " + pathname)
-    Y.append(database[pathname])
+    Y = database[pathname]
+    #Y.append(database[pathname])
 
     data = plotly.graph_objs.Scatter(
             x=list(X),
@@ -62,9 +61,33 @@ def update_graph_scatter(pathname, input_data):
                                                 yaxis=dict(range=[min(Y),max(Y)]),)}
 
 def update_data():
+    print(database)
     data = get('http://localhost:5000/').json()
-    for key,val in data.items():
-        database[val[1]] += 1
+    getkeys = data.keys()
+    if data:
+        print(data)
+        for key,val in data.items():
+            if len(database[val[1]]) > 0:
+                database[val[1]].append(database[val[1]][-1] + 1)
+            else:
+                database[val[1]].append(1)
+        getkeys = set([i[1] for i in val])
+        print(getkeys)
+    for key,val in database.items():
+        if key not in getkeys:
+            database[key].append(database[key][-1])
+            
+#    for key,val in database.items():
+#        if key in data.keys():
+#            database[key].append(data[key])
+#        elif len(database[key]) > 0:
+#            database[key].append(database[key][-1])
+#        else:
+#            database[key] = [0]
+                
+#    for key,val in data.items():
+#        database[val[1]] += 1
+    print("END")
     print(database)
     
 @app.callback(dash.dependencies.Output('page-content', 'children'),
