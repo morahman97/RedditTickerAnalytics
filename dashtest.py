@@ -13,7 +13,7 @@ print(dcc.__version__) # 0.6.0 or above is required
 
 app = dash.Dash(__name__)
 
-data = {'GME': 3}
+#data = {'GME': 3}
 X = []
 X.append(1)
 Y = []
@@ -42,9 +42,11 @@ app.layout = html.Div(
 database = defaultdict(int)
 
 @app.callback(Output('live-graph', 'figure'),
-              [Input('graph-update', 'n_intervals')])
-def update_graph_scatter(input_data):
+              [dash.dependencies.Input('url', 'pathname'),
+               Input('graph-update', 'n_intervals')])
+def update_graph_scatter(pathname, input_data):
     X.append(X[-1]+1)
+    print("MOMENT OF TRUTH: " + pathname)
     data = get('http://localhost:5000/').json()
     for key,val in data.items():
         database[val[1]] += 1
@@ -65,7 +67,11 @@ def update_graph_scatter(input_data):
     return {'data': [data],'layout' : go.Layout(xaxis=dict(range=[min(X),max(X)]),
                                                 yaxis=dict(range=[min(Y),max(Y)]),)}
 
-#def update_data():
+def update_data():
+    data = get('http://localhost:5000/').json()
+    for key,val in data.items():
+        database[val[1]] += 1
+    print(database)
     
 @app.callback(dash.dependencies.Output('page-content', 'children'),
               [dash.dependencies.Input('url', 'pathname')])
@@ -77,10 +83,9 @@ def display_page(pathname):
             html.H3('You are on page {}'.format(pathname))
         ])
     query = pathname[1:]
-    if query in data:
-        data[query] += 1
+    if query in database:
         return html.Div([
-            html.H3('Success: {}'.format(data[query]))
+            html.H3('Success: {}'.format(query))
         ])
     else:
         return html.Div([
