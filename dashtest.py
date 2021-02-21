@@ -45,17 +45,11 @@ database = defaultdict(int)
               [dash.dependencies.Input('url', 'pathname'),
                Input('graph-update', 'n_intervals')])
 def update_graph_scatter(pathname, input_data):
+    update_data()
     X.append(X[-1]+1)
+    pathname = pathname[1:]
     print("MOMENT OF TRUTH: " + pathname)
-    data = get('http://localhost:5000/').json()
-    for key,val in data.items():
-        database[val[1]] += 1
-    temp = dict(OrderedDict(sorted(database.items(), key = lambda t: t[1] ,reverse=True)))
-    print(temp)
-    if len(temp) > 0:
-        print(list(temp.items())[0])
-        print(list(temp.items())[0][1])
-        Y.append(list(temp.items())[0][1])
+    Y.append(database[pathname])
 
     data = plotly.graph_objs.Scatter(
             x=list(X),
