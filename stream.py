@@ -14,6 +14,7 @@ file = open('config.json')
 config = json.load(file) 
 
 # Initialize praw
+print("Initializing praw")
 reddit = praw.Reddit(client_id = config['client_id'],
                      client_secret = config['client_secret'],
                      user_agent = config['user_agent'])
@@ -25,10 +26,14 @@ tickersDict = dict() # Users that are legit (both old acc and decent karma)
 for ticker in tickers:
     tickersDict[ticker] = 0
 
+# Store punctuation marks to be filtered out from ticker content
 punct_table = str.maketrans(dict.fromkeys(string.punctuation))
 
+# Configure stream to read r/wsb content
 stream = reddit.subreddit("wallstreetbets").stream.comments(skip_existing=True)
 
+print("Starting stream")
+# Push stream data to TickerAPI.py
 while True:
     comment = next(stream)
     for word in comment.body.split():

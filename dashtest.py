@@ -3,11 +3,12 @@ import plotly
 import plotly.graph_objs as go
 import dash_core_components as dcc
 import dash_html_components as html
-from collections import deque, defaultdict, OrderedDict
+from collections import deque, defaultdict, OrderedDict, Counter
 from dash.dependencies import Output, Input
 from requests import get
 import pandas as pd
 from datetime import datetime
+import dash_table
 
 print(dcc.__version__) # 0.6.0 or above is required
 
@@ -24,14 +25,29 @@ X = []
 time = 0
 Y = []
 
+df = pd.read_csv("tickers.csv")
+#df = pd.DataFrame()
+
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+def create_data_table(df):
+    """Create Dash datatable from Pandas DataFrame."""
+    table = dash_table.DataTable(
+        id="database-table",
+        columns=[{"name": i, "id": i} for i in df.columns],
+        #sort_action="native",
+        #sort_mode="native",
+        data=df.to_dict('records'),
+        page_size=300,
+    )
+    return table
 
 app.layout = html.Div(
     [
         # represents the URL bar, doesn't render anything
         dcc.Location(id='url', refresh=False),
 
-        html.H1('What\'s Ticking?'),
+        html.H1('What\'s Ticking on r/wallstreetbets?'),
 
 #        dcc.Link('Navigate to "/"', href='/'),
 #        html.Br(),
@@ -45,6 +61,7 @@ app.layout = html.Div(
             id='graph-update',
             interval=5*1000
         ),
+        create_data_table(df)
     ]
 )
 
@@ -62,8 +79,7 @@ def update_graph_scatter(pathname, input_data):
                 mode= 'lines+markers'
                 )
 
-        return {'data': [data]
-        }
+        return {'data': [data]}
     global time
     update_data()
     X.append(time)
@@ -75,21 +91,25 @@ def update_graph_scatter(pathname, input_data):
     data = plotly.graph_objs.Scatter(
             x=list(X),
             y=list(Y),
-            name='Scatter',
-            mode= 'lines+markers'
+            name=pathname + " Mentions",
+            showlegend=True,
+            mode= 'lines+markers',
             )
 
-    return {'data': [data],'layout' : go.Layout(xaxis=dict(range=[min(X),max(X)]),
-                                                yaxis=dict(range=[min(Y),max(Y)]),)}
+    return {'data': [data],'layout' : go.Layout(xaxis=dict(range=[0,max(X)]),
+                                                yaxis=dict(range=[0,max(Y)]),)}
 
 def update_data():
-    #print(database)
     data = get('http://localhost:5000/').json()
     getkeys = data.keys()
     if data:
         print(data)
+        counter = Counter()
         for key,val in data.items():
-            database[val[1]].append(database[val[1]][-1] + 1)
+            counter.update({val[1]:1})
+        #database[val[1]].append(database[val[1]][-1] + 1)
+        for key,val in database.items():
+            database[key].append(database[key][-1] + counter[key])
         getkeys = set([i[1] for i in data.values()])
         print("GETKEYS TEST")
         print(getkeys)
@@ -97,19 +117,13 @@ def update_data():
     for key,val in database.items():
         if key not in getkeys:
             database[key].append(database[key][-1])
+#    temp = [i for i in data.values()]
+#    print(temp)
+#    for i in temp:
+#        df.append(i)
+    #df.append(temp)
             
-#    for key,val in database.items():
-#        if key in data.keys():
-#            database[key].append(data[key])
-#        elif len(database[key]) > 0:
-#            database[key].append(database[key][-1])
-#        else:
-#            database[key] = [0]
-                
-#    for key,val in data.items():
-#        database[val[1]] += 1
     print("END")
-    #print(database)
     for key,val in database.items():
         if 1 in val:
             print(key, val)
